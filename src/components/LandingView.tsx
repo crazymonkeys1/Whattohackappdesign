@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
+import { DemoModeBanner } from './DemoModeBanner';
 import { hasPreGeneratedReport } from '../utils/preGeneratedReports';
-import { Zap } from 'lucide-react';
+import { Zap, Loader2 } from 'lucide-react';
 
 type LandingViewProps = {
   onSearch: (query: string) => void;
@@ -94,15 +95,24 @@ export function LandingView({ onSearch }: LandingViewProps) {
                 <Button
                   type="submit"
                   disabled={!query.trim() || isSearching}
-                  className="h-16 min-h-[64px] px-10 sm:px-10 bg-[#ff6b35] hover:bg-[#ff8555] text-black rounded-none font-normal leading-[16px] not-italic text-[13px] tracking-[2.6px] uppercase transition-colors"
+                  className="h-16 min-h-[64px] px-10 sm:px-10 bg-[#ff6b35] hover:bg-[#ff8555] text-black rounded-none font-normal leading-[16px] not-italic text-[13px] tracking-[2.6px] uppercase transition-colors flex items-center justify-center gap-2"
                 >
+                  {isSearching && <Loader2 className="w-4 h-4 animate-spin" />}
                   {isSearching ? 'Analyzing...' : 'Analyze'}
                 </Button>
               </form>
               <p className="text-neutral-600 text-[10px] leading-[14px] mt-3 text-center">
-                AI will analyze the page and extract hackathon details & sponsors
+                {isSearching 
+                  ? '🔍 Analyzing hackathon page and identifying strategic opportunities...'
+                  : 'AI will analyze the page and extract hackathon details & sponsors'
+                }
               </p>
             </div>
+          </div>
+
+          {/* Demo Mode Banner */}
+          <div className="w-full max-w-[900px] mx-auto mb-8">
+            <DemoModeBanner />
           </div>
 
           {/* Featured Hackathons - Mobile First Approach */}
@@ -118,7 +128,7 @@ export function LandingView({ onSearch }: LandingViewProps) {
                   <button
                     key={index}
                     onClick={() => handleFeaturedClick(hackathon.name)}
-                    className="text-left p-6 bg-neutral-950 border border-neutral-900 active:border-[#ff6b35] transition-colors group w-[280px] flex-shrink-0 relative"
+                    className="text-left p-6 bg-neutral-950 border border-neutral-900 active:border-[#ff6b35] transition-all group w-[280px] flex-shrink-0 relative disabled:opacity-40 disabled:cursor-not-allowed"
                     disabled={isSearching}
                   >
                     {hasPreGeneratedReport(hackathon.name) && (
@@ -152,7 +162,7 @@ export function LandingView({ onSearch }: LandingViewProps) {
                 <button
                   key={index}
                   onClick={() => handleFeaturedClick(hackathon.name)}
-                  className="text-left p-4 sm:p-5 bg-neutral-950 border border-neutral-900 hover:border-[#ff6b35] transition-colors group relative"
+                  className="text-left p-4 sm:p-5 bg-neutral-950 border border-neutral-900 hover:border-[#ff6b35] transition-all group relative disabled:opacity-40 disabled:cursor-not-allowed"
                   disabled={isSearching}
                 >
                   {hasPreGeneratedReport(hackathon.name) && (

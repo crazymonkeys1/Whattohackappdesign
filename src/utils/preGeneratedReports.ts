@@ -374,3 +374,62 @@ export async function generateAndStoreReport(
     throw error;
   }
 }
+
+/**
+ * Get mock hackathon data for featured hackathons
+ * Used as fallback when API is not available
+ */
+export function getMockHackathonData(hackathonName: string): any {
+  const mockData: Record<string, any> = {
+    'Supabase Launch Week': {
+      name: 'Supabase Launch Week',
+      date: 'Dec 15-22, 2025',
+      location: 'Online',
+      organizer: 'Supabase',
+      sponsors: ['Supabase', 'OpenAI', 'Vercel', 'Cloudflare'],
+      description: 'A week-long celebration of new Supabase features, with exciting product launches, community demos, and special prizes for the best projects built during the event.',
+      jury: ['Paul Copplestone (CEO, Supabase)', 'Ant Wilson (CTO, Supabase)', 'Developer Relations Team'],
+      theme: 'Build the future of backend development with Supabase',
+      prizes: 'Grand Prize: $10,000 + Featured on Supabase Blog',
+      url: 'https://supabase.com/launch-week',
+    },
+    'HackMIT 2025': {
+      name: 'HackMIT 2025',
+      date: 'Sep 20-22, 2025',
+      location: 'MIT Campus, Cambridge MA',
+      organizer: 'MIT',
+      sponsors: ['Google', 'Microsoft', 'GitHub', 'Figma', 'OpenAI'],
+      description: 'MIT\'s flagship hackathon bringing together 1,000+ hackers from around the world to build innovative solutions to real-world problems.',
+      jury: ['MIT Faculty', 'Industry Leaders', 'Previous Winners'],
+      theme: 'Innovation for impact',
+      prizes: 'Grand Prize: $15,000 + Internship Opportunities',
+      url: 'https://hackmit.org',
+    },
+    'ETHGlobal Paris': {
+      name: 'ETHGlobal Paris',
+      date: 'Jul 12-14, 2025',
+      location: 'Paris, France',
+      organizer: 'ETHGlobal',
+      sponsors: ['Ethereum Foundation', 'Polygon', 'Chainlink', 'The Graph'],
+      description: 'Build the next generation of decentralized applications on Ethereum and win prizes from top Web3 sponsors.',
+      jury: ['Vitalik Buterin', 'ETHGlobal Team', 'Sponsor Representatives'],
+      theme: 'Decentralized innovation',
+      prizes: 'Grand Prize: $25,000 + Sponsor Bounties',
+      url: 'https://ethglobal.com/events/paris',
+    },
+    'Junction 2025': {
+      name: 'Junction 2025',
+      date: 'Nov 8-10, 2025',
+      location: 'Helsinki, Finland',
+      organizer: 'Junction',
+      sponsors: ['Nokia', 'Wolt', 'Nordea', 'Unity'],
+      description: 'Europe\'s leading hackathon focused on hardware, IoT, and physical computing challenges.',
+      jury: ['Industry Experts', 'Hardware Engineers', 'Startup Founders'],
+      theme: 'Hardware meets software',
+      prizes: 'Grand Prize: €10,000 + Hardware Kits',
+      url: 'https://junction.fi',
+    },
+  };
+
+  return mockData[hackathonName] || null;
+}

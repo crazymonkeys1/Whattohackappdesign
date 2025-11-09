@@ -3,16 +3,22 @@
  * 
  * This file handles AI API calls for generating ideas and leverages.
  * 
- * SETUP INSTRUCTIONS:
- * 1. Replace 'YOUR_OPENAI_API_KEY_HERE' with your actual OpenAI API key
- * 2. Or use any other AI provider (Anthropic, Google, etc.) by modifying the fetch call
- * 3. For production, use environment variables instead of hardcoding keys
+ * ⚠️  DEMO MODE ACTIVE - API KEY NOT CONFIGURED
  * 
- * Example with environment variables:
+ * The app currently works in demo mode using pre-generated data.
+ * Featured hackathons (Supabase Launch Week, HackMIT 2025) work perfectly!
+ * 
+ * TO ENABLE FULL AI ANALYSIS:
+ * 1. Get your OpenAI API key: https://platform.openai.com/api-keys
+ * 2. Replace 'YOUR_OPENAI_API_KEY_HERE' below with your actual key
+ * 3. Save this file
+ * 4. Try analyzing any hackathon URL!
+ * 
+ * For production, use environment variables instead:
  * const API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
  */
 
-const OPENAI_API_KEY = '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';
+const OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY_HERE'; // 👈 Replace this with your OpenAI API key
 const USE_MOCK_DATA = false; // Set to true to use mock data for testing without API key
 
 export type GenerateIdeasParams = {
@@ -308,7 +314,14 @@ export async function extractHackathonData(params: ExtractHackathonDataParams): 
     });
 
     if (!response.ok) {
-      throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData?.error?.message || response.statusText;
+      
+      if (response.status === 401) {
+        throw new Error('API call failed: 401 - Invalid or missing OpenAI API key. Please configure your API key in /utils/ai.ts');
+      }
+      
+      throw new Error(`API call failed: ${response.status} - ${errorMessage}`);
     }
 
     const data = await response.json();
@@ -328,8 +341,14 @@ export async function extractHackathonData(params: ExtractHackathonDataParams): 
       theme: content.theme || null,
       prizes: content.prizes || null,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Failed to extract hackathon data:', error);
+    
+    // Re-throw with clearer message if it's an auth error
+    if (error?.message?.includes('401')) {
+      throw new Error('API call failed: 401 - OpenAI API key is invalid or expired');
+    }
+    
     throw error;
   }
 }

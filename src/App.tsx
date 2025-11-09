@@ -3,9 +3,11 @@ import { LandingView } from './components/LandingView';
 import { HackathonDataView } from './components/HackathonDataView';
 import { ResultsView } from './components/ResultsView';
 import { OnboardingSteps, OnboardingData } from './components/OnboardingSteps';
+import { AnalyzingOverlay } from './components/AnalyzingOverlay';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner@2.0.3';
 import { extractHackathonData, analyzeSponsorOpportunities } from './utils/ai';
+import { getMockHackathonData, hasPreGeneratedReport } from './utils/preGeneratedReports';
 // Import test utilities (available in browser console)
 import './utils/aiTest';
 
@@ -75,74 +77,142 @@ export default function App() {
   });
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [analyzingStage, setAnalyzingStage] = useState<'extracting' | 'analyzing-sponsors' | null>(null);
+  const [sponsorProgress, setSponsorProgress] = useState({ current: 0, total: 0 });
 
   // Show AI setup instructions on load
   useEffect(() => {
-    console.log('%c🚀 What To Hack - AI Integration Enabled', 'font-size: 16px; font-weight: bold; color: #ff6b35');
-    console.log('%c✨ New: Ideas auto-generate after onboarding!', 'font-size: 14px; font-weight: bold; color: #ff6b35');
-    console.log('%c⚡ Featured hackathons have instant pre-generated reports', 'font-size: 12px; color: #ff6b35');
-    console.log('%c\n📝 To test real AI:', 'font-size: 14px; font-weight: bold; color: #ffffff');
+    console.log('%c🚀 What To Hack - Demo Mode Active', 'font-size: 16px; font-weight: bold; color: #ff6b35');
+    console.log('%c✨ Try featured hackathons for instant results!', 'font-size: 14px; font-weight: bold; color: #ff6b35');
+    console.log('%c⚡ Supabase Launch Week & HackMIT 2025 have pre-generated reports', 'font-size: 12px; color: #ff6b35');
+    console.log('%c\n⚠️  OpenAI API not configured - using demo data', 'font-size: 14px; font-weight: bold; color: #ffaa00');
+    console.log('%c\n📝 To enable real AI analysis:', 'font-size: 14px; font-weight: bold; color: #ffffff');
     console.log('%c1. Get OpenAI API key: https://platform.openai.com/api-keys', 'color: #a1a1a1');
-    console.log('%c2. Add key to /utils/ai.ts (line 15)', 'color: #a1a1a1');
-    console.log('%c3. Enter a hackathon URL or click a featured one', 'color: #a1a1a1');
+    console.log('%c2. Replace key in /utils/ai.ts (line 15)', 'color: #a1a1a1');
+    console.log('%c3. Enter any hackathon URL for live extraction', 'color: #a1a1a1');
     console.log('%c\n🧪 Test commands available:', 'font-size: 14px; font-weight: bold; color: #ffffff');
     console.log('%c   testHackathonExtraction("https://hackathon-url")', 'color: #ff6b35');
     console.log('%c   testIdeasGeneration()', 'color: #ff6b35');
     console.log('%c   testLeveragesGeneration()', 'color: #ff6b35');
     console.log('%c   testFullGeneration()', 'color: #ff6b35');
     console.log('%c\n📚 Docs: /AUTO_GENERATION_GUIDE.md | /HACKATHON_EXTRACTION_GUIDE.md', 'color: #a1a1a1');
+    console.log('%c\n💡 Tip: Featured hackathons work perfectly without API key!', 'font-size: 12px; color: #00ff88');
   }, []);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
     
     try {
-      // Show loading toast
-      toast.loading('Analyzing hackathon page...', { id: 'extract-hackathon' });
+      // Check if this is a featured hackathon with pre-generated data
+      const mockData = getMockHackathonData(query);
       
-      // Extract data using AI
-      const data = await extractHackathonData({ url: query });
-      
-      // Update toast for sponsor analysis
-      toast.loading('Analyzing sponsor opportunities...', { id: 'extract-hackathon' });
-      
-      // Analyze sponsor opportunities for each sponsor
-      const sponsorAnalyses: SponsorAnalysis[] = [];
-      for (const sponsor of data.sponsors || []) {
-        try {
-          const analysis = await analyzeSponsorOpportunities(
-            sponsor,
-            data.name,
-            data.organizer,
-            data.theme
-          );
-          sponsorAnalyses.push({
-            sponsor,
-            company_snapshot: analysis.company_snapshot,
-            opportunities: analysis.opportunities || [],
-          });
-        } catch (error) {
-          console.error(`Failed to analyze ${sponsor}:`, error);
-          // Continue with other sponsors
-        }
+      if (mockData && hasPreGeneratedReport(query)) {
+        // Featured hackathon with instant report - skip API calls
+        console.log(`⚡ Using pre-generated data for: ${query}`);
+        setAnalyzingStage('extracting');
+        toast.loading('Loading hackathon data...', { id: 'extract-hackathon' });
+        
+        // Simulate a brief loading for UX
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        setHackathonData(mockData);
+        setAnalyzingStage(null);
+        toast.success('Hackathon loaded instantly! ⚡', { id: 'extract-hackathon' });
+        setView('onboarding');
+        return;
       }
       
-      // Add sponsor analysis to data
-      const enrichedData = {
-        ...data,
-        sponsorAnalysis: sponsorAnalyses,
-      };
-      
-      setHackathonData(enrichedData);
-      
-      // Success toast
-      toast.success('Hackathon analyzed successfully!', { id: 'extract-hackathon' });
-      
-      // Go to onboarding
-      setView('onboarding');
-    } catch (error) {
+      // Try AI extraction
+      try {
+        // Stage 1: Extract hackathon data
+        setAnalyzingStage('extracting');
+        toast.loading('Analyzing hackathon page...', { id: 'extract-hackathon' });
+        
+        const data = await extractHackathonData({ url: query });
+        
+        // Stage 2: Analyze sponsors
+        const sponsorCount = data.sponsors?.length || 0;
+        setAnalyzingStage('analyzing-sponsors');
+        setSponsorProgress({ current: 0, total: sponsorCount });
+        toast.loading(`Analyzing ${sponsorCount} sponsor opportunities...`, { id: 'extract-hackathon' });
+        
+        const sponsorAnalyses: SponsorAnalysis[] = [];
+        for (let i = 0; i < (data.sponsors || []).length; i++) {
+          const sponsor = data.sponsors![i];
+          
+          // Update progress
+          setSponsorProgress({ current: i + 1, total: sponsorCount });
+          
+          try {
+            const analysis = await analyzeSponsorOpportunities(
+              sponsor,
+              data.name,
+              data.organizer,
+              data.theme
+            );
+            sponsorAnalyses.push({
+              sponsor,
+              company_snapshot: analysis.company_snapshot,
+              opportunities: analysis.opportunities || [],
+            });
+          } catch (error) {
+            console.error(`Failed to analyze ${sponsor}:`, error);
+            // Continue with other sponsors
+          }
+        }
+        
+        // Add sponsor analysis to data
+        const enrichedData = {
+          ...data,
+          sponsorAnalysis: sponsorAnalyses,
+        };
+        
+        setHackathonData(enrichedData);
+        
+        // Clear analyzing state
+        setAnalyzingStage(null);
+        setSponsorProgress({ current: 0, total: 0 });
+        
+        // Success toast
+        toast.success('Hackathon analyzed successfully!', { id: 'extract-hackathon' });
+        
+        // Go to onboarding
+        setView('onboarding');
+      } catch (apiError: any) {
+        console.error('API extraction failed:', apiError);
+        
+        // Check if we have mock data as fallback
+        if (mockData) {
+          console.log(`⚠️ API failed, using mock data for: ${query}`);
+          setHackathonData(mockData);
+          setAnalyzingStage(null);
+          setSponsorProgress({ current: 0, total: 0 });
+          toast.success('Loaded hackathon data (demo mode)', { id: 'extract-hackathon' });
+          setView('onboarding');
+          return;
+        }
+        
+        // No fallback available
+        throw apiError;
+      }
+    } catch (error: any) {
       console.error('Failed to extract hackathon data:', error);
-      toast.error('Failed to analyze hackathon. Please check the URL and try again.', { id: 'extract-hackathon' });
+      
+      // Clear analyzing state
+      setAnalyzingStage(null);
+      setSponsorProgress({ current: 0, total: 0 });
+      
+      // Show appropriate error message
+      const isAuthError = error?.message?.includes('401') || error?.message?.includes('API call failed');
+      
+      if (isAuthError) {
+        toast.error(
+          'AI analysis unavailable - OpenAI API key not configured. Try a featured hackathon for instant results!',
+          { id: 'extract-hackathon', duration: 5000 }
+        );
+      } else {
+        toast.error('Failed to analyze hackathon. Please check the URL and try again.', { id: 'extract-hackathon' });
+      }
     }
   };
 
@@ -166,6 +236,14 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <Toaster />
+      
+      {/* Full-screen analyzing overlay */}
+      <AnalyzingOverlay 
+        stage={analyzingStage}
+        sponsorCount={sponsorProgress.total}
+        currentSponsor={sponsorProgress.current}
+      />
+      
       {view === 'landing' && <LandingView onSearch={handleSearch} />}
       {view === 'onboarding' && hackathonData && (
         <OnboardingSteps
